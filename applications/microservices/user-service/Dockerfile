@@ -1,3 +1,5 @@
+#Test
+
 # Stage 1: Build
 FROM golang:1.21-alpine AS builder
 
@@ -10,9 +12,10 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# Copy go mod files first for caching
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+# Copy go.mod first for caching; generate go.sum inside the build
+# (CI runner may not have `go` locally; let the builder download modules)
+COPY go.mod ./
+RUN go mod download
 
 # Copy source code
 COPY . .
