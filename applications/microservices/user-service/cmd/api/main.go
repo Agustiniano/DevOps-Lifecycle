@@ -1,126 +1,146 @@
 package main
 
 import (
-    "context"
-    "fmt"
-    "net/http"
-    "os"
-    "os/signal"
-    "syscall"
-    "time"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-    "github.com/gorilla/mux"
-    "github.com/prometheus/client_golang/prometheus/promhttp"
-    "go.uber.org/zap"
-
-    "user-service/internal/handlers"
-    "user-service/internal/repository"
-    "user-service/internal/services"
-    "user-service/pkg/config"
-    "user-service/pkg/database"
-    "user-service/pkg/logger"
-    "user-service/pkg/metrics"
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-    version = "dev"
-    commit  = "unknown"
+	version = "dev"
+	commit  = "unknown"
 )
 
+type User struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 func main() {
-    // Initialize configuration
-    cfg, err := config.Load()
-    if err != nil {
-        panic(fmt.Sprintf("Failed to load configuration: %v", err))
-    }
+	port := getEnv("PORT", "8080")
+	
+	log.Printf("Starting User Service - version: %s, commit: %s", version, commit)
 
-    // Initialize logger
-    if err := logger.Init(cfg.ServiceName, version, cfg.Environment); err != nil {
-        panic(fmt.Sprintf("Failed to initialize logger: %v", err))
-    }
-    defer logger.Sync()
+	r := mux.NewRouter()
 
-    logger.Info("Starting service",
-        zap.String("version", version),
-        zap.String("commit", commit),
-        zap.String("environment", cfg.Environment),
-    )
+	// Health endpoints
+	r.HandleFunc("/health", healthHandler).Methods("GET")
+	r.HandleFunc("/ready", readyHandler).Methods("GET")
 
-    // Initialize database
-    db, err := database.Connect(cfg.DatabaseURL)
-    if err != nil {
-        logger.Fatal("Failed to connect to database", zap.Error(err))
-    }
-    defer db.Close()
+	// Metrics endpoint
+	r.Handle("/metrics", promhttp.Handler())
 
-    // Run migrations
-    if err := database.Migrate(db); err != nil {
-        logger.Fatal("Failed to run migrations", zap.Error(err))
-    }
+	// API v1 routes
+	api := r.PathPrefix("/api/v1").Subrouter()
+	api.HandleFunc("/users", listUsersHandler).Methods("GET")
+	api.HandleFunc("/users", createUserHandler).Methods("POST")
+	api.HandleFunc("/users/{id}", getUserHandler).Methods("GET")
 
-    // Initialize repository layer
-    userRepo := repository.NewUserRepository(db)
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 
-    // Initialize service layer
-    userService := services.NewUserService(userRepo)
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server starting on port %s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
 
-    // Initialize handlers
-    userHandler := handlers.NewUserHandler(userService)
-    healthHandler := handlers.NewHealthHandler(db)
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-    // Setup router
-    r := mux.NewRouter()
+	log.Println("Server shutting down")
 
-    // Health endpoints
-    r.HandleFunc("/health", healthHandler.Health).Methods("GET")
-    r.HandleFunc("/ready", healthHandler.Ready).Methods("GET")
+	// Graceful shutdown with 30 second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-    // Metrics endpoint
-    r.Handle("/metrics", promhttp.Handler())
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
 
-    // API v1 routes
-    api := r.PathPrefix("/api/v1").Subrouter()
-    api.Use(logger.HTTPMiddleware)
-    api.Use(metrics.HTTPMiddleware)
+	log.Println("Server exited")
+}
 
-    // User routes
-    api.HandleFunc("/users", userHandler.List).Methods("GET")
-    api.HandleFunc("/users", userHandler.Create).Methods("POST")
-    api.HandleFunc("/users/{id}", userHandler.Get).Methods("GET")
-    api.HandleFunc("/users/{id}", userHandler.Update).Methods("PUT")
-    api.HandleFunc("/users/{id}", userHandler.Delete).Methods("DELETE")
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "healthy",
+		"version": version,
+		"commit":  commit,
+	})
+}
 
-    // Create HTTP server
-    srv := &http.Server{
-        Addr:         fmt.Sprintf(":%d", cfg.Port),
-        Handler:      r,
-        ReadTimeout:  15 * time.Second,
-        WriteTimeout: 15 * time.Second,
-        IdleTimeout:  60 * time.Second,
-    }
+func readyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ready",
+	})
+}
 
-    // Start server in goroutine
-    go func() {
-        logger.Info("Server starting", zap.Int("port", cfg.Port))
-        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            logger.Fatal("Server failed to start", zap.Error(err))
-        }
-    }()
+func listUsersHandler(w http.ResponseWriter, r *http.Request) {
+	users := []User{
+		{ID: "1", Name: "John Doe", Email: "john@example.com", CreatedAt: time.Now()},
+		{ID: "2", Name: "Jane Smith", Email: "jane@example.com", CreatedAt: time.Now()},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
 
-    // Wait for interrupt signal
-    quit := make(chan os.Signal, 1)
-    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-    <-quit
+func createUserHandler(w http.ResponseWriter, r *http.Request) {
+	var user User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user.ID = fmt.Sprintf("%d", time.Now().Unix())
+	user.CreatedAt = time.Now()
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(user)
+}
 
-    logger.Info("Server shutting down")
+func getUserHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	
+	user := User{
+		ID:        id,
+		Name:      "Sample User",
+		Email:     "user@example.com",
+		CreatedAt: time.Now(),
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
 
-    // Graceful shutdown with 30 second timeout
-    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-    defer cancel()
-
-    if err := srv.Shutdown(ctx); err != nil {
-        logger.Error("Server forced to shutdown", zap.Error(err))
-    }
-
-    logger.Info("Server exited")
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
