@@ -23,14 +23,24 @@ jobs:
       - name: Login to GHCR
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push image
         working-directory: applications/microservices/user-service
+        env:
+          DOCKER_BUILDKIT: 1
         run: |
           USER_LC="${GHCR_USER,,}"
           IMAGE="ghcr.io/${USER_LC}/user-service:${GITHUB_SHA}"
           echo "Building $IMAGE"
-          docker build -t "$IMAGE" .
-          docker push "$IMAGE"
+          docker buildx build \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg COMMIT="${GITHUB_SHA}" \
+            --platform linux/amd64 \
+            --push \
+            -t "$IMAGE" \
+            .
 
       - name: Update GitOps manifests
         run: |
