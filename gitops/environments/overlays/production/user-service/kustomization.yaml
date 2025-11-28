@@ -1,15 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: production
-
 bases:
   - ../../../base/user-service
-
 patches:
   - path: patches/resources.yaml
   - path: patches/replicas.yaml
-
 configMapGenerator:
   - name: user-service-config
     behavior: merge
@@ -17,7 +13,6 @@ configMapGenerator:
       - ENVIRONMENT=production
       - MAX_CONNECTIONS=100
       - CACHE_TTL=300
-
 images:
-  - name: harbor.acme.com/platform/user-service
-    newTag: v1.2.3  # Updated by CI/CD pipeline
+  - name: ghcr.io/agustiniano/user-service
+    newTag: 0db9c221efa086b17d76473ad9c67226cb48baa9 # Updated by CI/CD pipeline
