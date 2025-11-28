@@ -1,5 +1,3 @@
-#Test
-
 # Stage 1: Build
 FROM golang:1.21-alpine AS builder
 
