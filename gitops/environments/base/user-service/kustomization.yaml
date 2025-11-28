@@ -5,6 +5,8 @@ namespace: production
 
 resources:
   - deployment.yaml
+  # Uncomment when Prometheus Operator is installed:
+  # - servicemonitor.yaml
 
 commonLabels:
   app: user-service

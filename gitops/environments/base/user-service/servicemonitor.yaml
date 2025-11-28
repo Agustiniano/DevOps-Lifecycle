@@ -1,0 +1,18 @@
+# ServiceMonitor for Prometheus Operator
+# Requires: Prometheus Operator CRDs installed in the cluster
+# To enable: Add this file to kustomization.yaml resources list
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+    prometheus: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: user-service
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics

@@ -120,6 +120,10 @@ spec:
     targetPort: http
     protocol: TCP
     name: http
+  - port: 8080
+    targetPort: http
+    protocol: TCP
+    name: metrics
   selector:
     app: user-service
 ---
@@ -185,19 +189,3 @@ spec:
   selector:
     matchLabels:
       app: user-service
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: user-service
-  labels:
-    app: user-service
-    prometheus: monitoring
-spec:
-  selector:
-    matchLabels:
-      app: user-service
-  endpoints:
-  - port: metrics
-    interval: 30s
-    path: /metrics
