@@ -6,17 +6,17 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: applications
-  
+  project: default
+
   source:
-    repoURL: https://github.com/acme/gitops-manifests.git
+    repoURL: https://github.com/Agustiniano/DevOps-Lifecycle
     targetRevision: main
     path: gitops/environments/overlays/production/user-service
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: production
-  
+
   syncPolicy:
     automated:
       prune: true
@@ -31,7 +31,7 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-  
+
   ignoreDifferences:
     - group: apps
       kind: Deployment
