@@ -12,42 +12,47 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      GHCR_USER: ${{ secrets.GHCR_USER }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Login to GHCR
-        run: echo "${{ secrets.GHCR_TOKEN }}" \
-          | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
       - name: Build and push image
         working-directory: applications/microservices/user-service
         run: |
-          IMAGE="ghcr.io/${{ secrets.GHCR_USER,, }}/user-service:${{ github.sha }}"
+          USER_LC="${GHCR_USER,,}"
+          IMAGE="ghcr.io/${USER_LC}/user-service:${GITHUB_SHA}"
           echo "Building $IMAGE"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
 
-
       - name: Update GitOps manifests
         run: |
-          IMAGE="ghcr.io/${{ secrets.GHCR_USER }}/user-service:${{ github.sha }}"
+          USER_LC="${GHCR_USER,,}"
+          IMAGE="ghcr.io/${USER_LC}/user-service:${GITHUB_SHA}"
 
           # instalar yq
           curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
             -o /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
 
-          # actualizar deployment base o overlay de prod
           cd gitops/environments/overlays/production/user-service
-          yq -i '.images[0].name = "ghcr.io/'"${{ secrets.GHCR_USER }}"'/user-service"' kustomization.yaml || true
-          yq -i '.images[0].newTag = "'"${GITHUB_SHA}"'"' kustomization.yaml || true
 
-          cd -  # volver a la raíz
+          # Asegurarse de que el bloque images exista y esté en lowercase
+          yq -i ".images[0].name = \"ghcr.io/${USER_LC}/user-service\"" kustomization.yaml || true
+          yq -i ".images[0].newTag = \"${GITHUB_SHA}\"" kustomization.yaml || true
+
+          cd -  # volver a la raíz del repo
 
           git config user.name "ciclovida-bot"
           git config user.email "ciclovida-bot@example.com"
 
           git status
           git commit -am "chore: deploy user-service ${GITHUB_SHA}" || echo "No changes"
-          git push https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/Agustiniano/DevOps-Lifecycle.git
+          git push "https://x-access-token:${GHCR_TOKEN}@github.com/Agustiniano/DevOps-Lifecycle.git"
