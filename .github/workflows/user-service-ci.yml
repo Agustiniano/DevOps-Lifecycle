@@ -23,9 +23,11 @@ jobs:
       - name: Build and push image
         working-directory: applications/microservices/user-service
         run: |
-          IMAGE="ghcr.io/${{ secrets.GHCR_USER }}/user-service:${{ github.sha }}"
+          IMAGE="ghcr.io/${{ secrets.GHCR_USER,, }}/user-service:${{ github.sha }}"
+          echo "Building $IMAGE"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
+
 
       - name: Update GitOps manifests
         run: |
