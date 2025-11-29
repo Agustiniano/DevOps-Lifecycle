@@ -53,11 +53,6 @@ spec:
             configMapKeyRef:
               name: user-service-config
               key: LOG_LEVEL
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: user-service-db-connection
-              key: connection-string
         
         resources:
           requests:
