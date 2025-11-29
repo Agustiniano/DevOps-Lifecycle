@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-logs-traces
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: monitoring
+spec:
+  project: default
+  sources: []
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: loki
+    targetRevision: "6.8.0"
+    helm:
+      values: |
+        persistence:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+---
+# Tempo as another Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-traces-tempo
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: monitoring
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: "6.6.0"
+    helm:
+      values: |
+        persistence:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tracing
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true

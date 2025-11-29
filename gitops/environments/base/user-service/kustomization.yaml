@@ -6,8 +6,9 @@ namespace: production
 resources:
   - deployment.yaml
   - ingress.yaml
-  # Uncomment when Prometheus Operator is installed:
-  # - servicemonitor.yaml
+  # ServiceMonitor depends on Prometheus Operator CRDs. Kept enabled but ArgoCD
+  # will wait for the operator because `user-service-prod` depends on it.
+  - servicemonitor.yaml
 
 labels:
   - pairs:

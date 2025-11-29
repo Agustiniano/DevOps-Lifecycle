@@ -5,6 +5,9 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Ensure monitoring operator is deployed before user-service resources
+    argocd.argoproj.io/depends-on: monitoring-prometheus
 spec:
   project: default
 

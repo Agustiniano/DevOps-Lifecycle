@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-grafana
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: monitoring
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    # Leave targetRevision empty to use the latest available chart version
+    # (avoids failures if a pinned version is not present in the remote repo)
+    # targetRevision: "9.14.0"
+    helm:
+      values: |
+        adminPassword: "changeme" # replace with secret in production
+        persistence:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
