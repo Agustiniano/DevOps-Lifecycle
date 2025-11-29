@@ -9,7 +9,7 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   rules:
-  - host: user-service.yourdomain.com  # CHANGE THIS to your actual domain
+  - host: user-service.local  # Change to your domain when deploying to cloud
     http:
       paths:
       - path: /
@@ -21,5 +21,5 @@ spec:
               number: 80
   tls:
   - hosts:
-    - user-service.yourdomain.com
+    - user-service.local
     secretName: user-service-tls
