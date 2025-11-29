@@ -32,14 +32,18 @@ jobs:
         run: |
           USER_LC="${{ github.repository_owner }}"
           USER_LC="${USER_LC,,}"
-          IMAGE="ghcr.io/${USER_LC}/user-service:${GITHUB_SHA}"
-          echo "Building $IMAGE"
+          IMAGE_BASE="ghcr.io/${USER_LC}/user-service"
+          IMAGE_SHA="${IMAGE_BASE}:${GITHUB_SHA}"
+          IMAGE_LATEST="${IMAGE_BASE}:latest"
+          
+          echo "Building ${IMAGE_SHA}"
           docker buildx build \
             --build-arg VERSION="${GITHUB_REF_NAME}" \
             --build-arg COMMIT="${GITHUB_SHA}" \
             --platform linux/amd64 \
             --push \
-            -t "$IMAGE" \
+            -t "${IMAGE_SHA}" \
+            -t "${IMAGE_LATEST}" \
             .
 
       - name: Update GitOps manifests

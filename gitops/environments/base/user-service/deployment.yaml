@@ -29,8 +29,8 @@ spec:
       
       containers:
       - name: api
-        image: harbor.acme.com/platform/user-service:v1.0.0
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/agustiniano/user-service:latest
+        imagePullPolicy: Always
         
         ports:
         - name: http
