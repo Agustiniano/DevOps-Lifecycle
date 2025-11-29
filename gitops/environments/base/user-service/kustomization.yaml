@@ -5,6 +5,7 @@ namespace: production
 
 resources:
   - deployment.yaml
+  - ingress.yaml
   # Uncomment when Prometheus Operator is installed:
   # - servicemonitor.yaml
 

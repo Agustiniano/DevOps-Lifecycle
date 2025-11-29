@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: user-service
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Production-specific annotations
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  rules:
+  - host: user-service.yourdomain.com  # CHANGE THIS to your actual domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - user-service.yourdomain.com
+    secretName: user-service-tls

@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+  annotations:
+    # Nginx Ingress annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Cert-manager annotation (uncomment when cert-manager is installed)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx  # or traefik, depending on your ingress controller
+  rules:
+  - host: user-service.local  # Change to your actual domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80
+  # TLS configuration (uncomment when you have certs)
+  # tls:
+  # - hosts:
+  #   - user-service.yourdomain.com
+  #   secretName: user-service-tls

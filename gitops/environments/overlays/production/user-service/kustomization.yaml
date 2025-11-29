@@ -1,11 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 namespace: production
+
 resources:
   - ../../../base/user-service
+
 patches:
   - path: patches/resources.yaml
   - path: patches/replicas.yaml
+  - path: patches/ingress.yaml
+
 configMapGenerator:
   - name: user-service-config
     behavior: merge
@@ -13,6 +18,7 @@ configMapGenerator:
       - ENVIRONMENT=production
       - MAX_CONNECTIONS=100
       - CACHE_TTL=300
+
 images:
   - name: ghcr.io/agustiniano/user-service
-    newTag: adca9c69a07c7c3efffb94c63c9dc8dcd29753e4 # Updated by CI/CD pipeline
+    newTag: latest  # Updated by CI/CD pipeline
