@@ -3,7 +3,7 @@ kind: Kustomization
 
 namespace: production
 
-bases:
+resources:
   - ../../../base/user-service
 
 patches:

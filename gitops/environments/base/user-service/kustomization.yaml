@@ -5,14 +5,14 @@ namespace: production
 
 resources:
   - deployment.yaml
-  - serviceaccount.yaml
   # Uncomment when Prometheus Operator is installed:
   # - servicemonitor.yaml
 
-commonLabels:
-  app: user-service
-  managed-by: argocd
-  environment: production
+labels:
+  - pairs:
+      app: user-service
+      managed-by: argocd
+      environment: production
 
 configMapGenerator:
   - name: user-service-config

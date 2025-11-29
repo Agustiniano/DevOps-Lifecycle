@@ -133,6 +133,10 @@ metadata:
   name: user-service
   labels:
     app: user-service
+# imagePullSecrets will be added via sealed-secret or external-secrets
+# Uncomment when you create the secret for private registry access:
+# imagePullSecrets:
+#   - name: ghcr-pull-secret
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
